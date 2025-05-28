@@ -1,0 +1,34 @@
+plugins {
+    id 'application'
+    id 'java'
+}
+
+application {
+    mainClass = 'bot.Main'
+}
+
+group = 'com.atas-studio'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+
+    // TelegramBots
+    implementation 'org.telegram:telegrambots-longpolling:8.3.0'
+    implementation 'org.telegram:telegrambots-client:8.3.0'
+
+    // Logging
+    implementation 'org.slf4j:slf4j-api:2.0.12'
+    implementation 'org.apache.logging.log4j:log4j-slf4j2-impl:2.23.1'
+
+    // Tests
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+test {
+    useJUnitPlatform()
+}
