@@ -5,6 +5,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -27,65 +28,21 @@ public class DevCommandHandler {
         String text = message.getText().trim();
         long chatId = message.getChatId();
 
-        if (text.equals("/start") || text.equals("/start@DEV_ITIS_FAQ_BOT")) {
+        if (text.equals("/start") || text.equals("/start@DEV_ITIS_FAQ_BOT"))
             sendMessage(chatId, "Этот бот нужен для отслеживания логов бота @ITIS_FAQ_BOT");
-        } else if (text.equals("/help") || text.equals("/help@DEV_ITIS_FAQ_BOT")) {
+        else if (text.equals("/help") || text.equals("/help@DEV_ITIS_FAQ_BOT"))
             sendHelp(chatId);
-        } else if (text.equals("/logs") || text.equals("/logs@DEV_ITIS_FAQ_BOT")) {
-            sendAllLogsAsFile(chatId); // Все логи файлом
-        } else if (text.matches("/logs\\s+\\d+")) {
+        else if (text.equals("/logs") || text.equals("/logs@DEV_ITIS_FAQ_BOT"))
+            sendLogsFile(chatId, BOT.getLogs(Integer.MAX_VALUE), "all_logs.txt");  // Все логи файлом
+        else if (text.matches("/logs\\s+\\d+")) {
             int limit = Integer.parseInt(text.split("\\s+")[1]);
-            if (limit <= MAX_INLINE_LOGS) {
+            if (limit <= MAX_INLINE_LOGS)
                 sendLastLogs(chatId, limit); // Мало логов → сообщением
-            } else {
-                sendLastLogsAsFile(chatId, limit); // Много логов → файлом
-            }
-        } else {
+            else
+                sendLogsFile(chatId, BOT.getLogs(limit), "last_" + limit + "_logs.txt");  // Много логов → файлом
+        } else
             sendMessage(chatId, "Неопознанная команда!");
-        }
     }
-
-    private void sendAllLogsAsFile(long chatId) {
-        List<LogEntry> logs = BOT.getLogs(Integer.MAX_VALUE);
-        sendLogsFile(chatId, logs, "all_logs.txt");
-    }
-
-    private void sendLastLogsAsFile(long chatId, int limit) {
-        List<LogEntry> logs = BOT.getLogs(limit);
-        sendLogsFile(chatId, logs, "last_" + limit + "_logs.txt");
-    }
-
-//    private void sendLogsFile(long chatId, List<LogEntry> logs, String fileName) {
-//        try {
-//            // Формируем содержимое файла
-//            StringBuilder sb = new StringBuilder();
-//            for (LogEntry log : logs) {
-//                sb.append(String.format("[%s] Confidence: %.2f\nQ: %s\nA: %s\n\n",
-//                        log.getTimestamp(), log.getConfidence(),
-//                        log.getQuestion(), log.getAnswer()));
-//            }
-//
-//            // Создаем временный файл
-//            File file = File.createTempFile("logs_", ".txt");
-//            try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-//                writer.write(sb.toString());
-//            }
-//
-//            // Отправляем файл
-//            SendDocument doc = SendDocument.builder()
-//                    .chatId(chatId)
-//                    .document(new InputFile(file, fileName))
-//                            .build();
-//            try {
-//                CLIENT.execute(doc);
-//            } catch (TelegramApiException e) {
-//                System.out.println("Ошибка отправки документа с логами!");
-//            }
-//
-//        } catch (IOException e) {
-//            sendMessage(chatId, "Ошибка при создании файла: " + e.getMessage());
-//        }
-//    }
 
     private void sendLogsFile(long chatId, List<LogEntry> logs, String fileName) {
         File file = null;
@@ -143,7 +100,6 @@ public class DevCommandHandler {
         }
     }
 
-
     private void sendLastLogs(long chatId, int limit) {
         List<LogEntry> logs = BOT.getLogs(limit);
         if (logs.isEmpty()) {
@@ -154,11 +110,11 @@ public class DevCommandHandler {
         StringBuilder sb = new StringBuilder("📜 *Последние " + limit + " логов:*\n\n");
         for (LogEntry log : logs) {
             sb.append(String.format("""
-                🕒 *%s* | Уверенность: *%.2f*
-                ❓ `%s`
-                💬 `%s`
-                ------------------------
-                """, log.getTimestamp(), log.getConfidence(),
+                            🕒 *%s* | Уверенность: *%.2f*
+                            ❓ `%s`
+                            💬 `%s`
+                            ------------------------
+                            """, log.getTimestamp(), log.getConfidence(),
                     log.getQuestion(), log.getAnswer()));
         }
 
@@ -168,10 +124,10 @@ public class DevCommandHandler {
 
     private void sendHelp(long chatId) {
         String helpText = """
-            📜 *Доступные команды*:
-            `/logs` — все логи
-            `/logs N` — последние N логов
-            """;
+                📜 *Доступные команды*:
+                `/logs` — все логи
+                `/logs N` — последние N логов
+                """;
         sendMarkdown(chatId, helpText);
     }
 

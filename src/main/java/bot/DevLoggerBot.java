@@ -52,6 +52,7 @@ public class DevLoggerBot implements LongPollingUpdateConsumer {
             }
 
             COMMAND_HANDLER.handle(update.getMessage());
+
         }
     }
 }
