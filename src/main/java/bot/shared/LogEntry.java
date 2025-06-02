@@ -11,6 +11,7 @@ public class LogEntry {
     private double confidence;
     private Instant timestamp;
     private String type; // "LOW_CONFIDENCE", "BAD_FEEDBACK"
+    private String feedbackComment;
 
     public long getUserId() {
         return userId;
@@ -36,17 +37,22 @@ public class LogEntry {
         return timestamp;
     }
 
+    public String getFeedbackComment() {
+        return feedbackComment;
+    }
+
     public String getType() {
         return type;
     }
 
-    public LogEntry(long userId, long chatId, String question, String answer, double confidence, Instant timestamp, String type) {
+    public LogEntry(long userId, long chatId, String question, String answer, double confidence, Instant timestamp,String feedbackComment, String type) {
         this.userId = userId;
         this.chatId = chatId;
         this.question = question;
         this.answer = answer;
         this.confidence = confidence;
         this.timestamp = timestamp;
+        this.feedbackComment = feedbackComment;
         this.type = type;
     }
 }

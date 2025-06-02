@@ -61,6 +61,7 @@ public class ITISbot implements LongPollingUpdateConsumer {
                     answer,
                     confidence,
                     Instant.now(),
+                    "",
                     "LOW_CONFIDENCE"
             );
             LOGGER_BOT.addLog(log);
@@ -85,6 +86,7 @@ public class ITISbot implements LongPollingUpdateConsumer {
                     "", // Ответ уже есть в предыдущих логах
                     0.0, // Нулевая уверенность для негативных отзывов
                     Instant.now(),
+                    "",
                     "BAD_FEEDBACK"
             );
             LOGGER_BOT.addLog(log);

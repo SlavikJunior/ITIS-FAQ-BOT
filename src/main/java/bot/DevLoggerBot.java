@@ -41,18 +41,21 @@ public class DevLoggerBot implements LongPollingUpdateConsumer {
     }
 
     @Override
-    public void consume(List<Update> list) {
-        for (Update update : list) {
-            if (!update.hasMessage() || !update.getMessage().hasText()) return;
+    public void consume(List<Update> updates) {
+        for (Update update : updates) {
+            if (update.hasCallbackQuery()) {
+                continue;
+            }
+
+            if (!update.hasMessage() || !update.getMessage().hasText()) continue;
 
             User user = update.getMessage().getFrom();
             if (!AuthUtils.isDeveloper(user.getId())) {
                 sendAccessDenied(update.getMessage().getChatId());
-                return;
+                continue;
             }
 
             COMMAND_HANDLER.handle(update.getMessage());
-
         }
     }
 }

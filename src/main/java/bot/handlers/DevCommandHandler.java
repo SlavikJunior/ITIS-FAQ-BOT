@@ -109,12 +109,20 @@ public class DevCommandHandler {
 
         StringBuilder sb = new StringBuilder("📜 *Последние " + limit + " логов:*\n\n");
         for (LogEntry log : logs) {
+            String logType = "";
+            if (log.getType().equals("BAD_FEEDBACK")) {
+                logType = "👎 *ПЛОХОЙ ОТЗЫВ*";
+            } else if (log.getType().equals("LOW_CONFIDENCE")) {
+                logType = "⚠️ *НИЗКАЯ УВЕРЕННОСТЬ*";
+            }
+
             sb.append(String.format("""
-                            🕒 *%s* | Уверенность: *%.2f*
-                            ❓ `%s`
-                            💬 `%s`
-                            ------------------------
-                            """, log.getTimestamp(), log.getConfidence(),
+            %s
+            🕒 *%s* | Уверенность: *%.2f*
+            ❓ `%s`
+            💬 `%s`
+            ------------------------
+            """, logType, log.getTimestamp(), log.getConfidence(),
                     log.getQuestion(), log.getAnswer()));
         }
 
