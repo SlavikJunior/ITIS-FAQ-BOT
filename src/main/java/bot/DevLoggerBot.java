@@ -6,6 +6,7 @@ import bot.shared.*;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -44,7 +45,7 @@ public class DevLoggerBot implements LongPollingUpdateConsumer {
     public void consume(List<Update> updates) {
         for (Update update : updates) {
             if (update.hasCallbackQuery()) {
-                continue;
+                handleCallback(update.getCallbackQuery());
             }
 
             if (!update.hasMessage() || !update.getMessage().hasText()) continue;
@@ -57,5 +58,12 @@ public class DevLoggerBot implements LongPollingUpdateConsumer {
 
             COMMAND_HANDLER.handle(update.getMessage());
         }
+    }
+
+    private void handleCallback(CallbackQuery callbackQuery) {
+        String data = callbackQuery.getData();
+        if (data.startsWith("/add") || data.startsWith("/get") || data.startsWith("/remove"))
+            COMMAND_HANDLER.handleCallbackFromAdminPanel(callbackQuery);
+//            COMMAND_HANDLER.sendMessageWithAdminPanel(callbackQuery.getMessage().getChatId(), String.valueOf(callbackQuery.getFrom().getId()));
     }
 }

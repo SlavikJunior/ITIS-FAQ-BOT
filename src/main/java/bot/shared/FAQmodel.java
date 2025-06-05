@@ -24,6 +24,6 @@ public class FAQmodel {
 
     public double getConfidence(String question) {
         // и вернуть уверенность ответа
-        return 0.6;
+        return 0.8;
     }
 }

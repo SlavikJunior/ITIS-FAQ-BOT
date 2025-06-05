@@ -3,15 +3,16 @@ package bot;
 import bot.handlers.MessageHandler;
 import bot.shared.FAQmodel;
 import bot.shared.LogEntry;
+
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
-import java.time.Instant;
 import java.util.List;
 
 public class ITISbot implements LongPollingUpdateConsumer {
@@ -30,8 +31,9 @@ public class ITISbot implements LongPollingUpdateConsumer {
     @Override
     public void consume(List<Update> updates) {
         for (Update update : updates) {
+            String question = "";
             if (update.hasMessage() && update.getMessage().hasText()) {
-                String question = update.getMessage().getText();
+                question = update.getMessage().getText();
                 long userId = update.getMessage().getFrom().getId();
                 long chatId = update.getMessage().getChatId();
 
@@ -47,7 +49,7 @@ public class ITISbot implements LongPollingUpdateConsumer {
                 // Отправляем ответ пользователю
                 MESSAGE_HANDLER.sendAnswer(chatId, question, answer);
             } else if (update.hasCallbackQuery()) {
-
+                handleFeedback(update.getCallbackQuery(), question);
             }
         }
     }
@@ -60,7 +62,6 @@ public class ITISbot implements LongPollingUpdateConsumer {
                     question,
                     answer,
                     confidence,
-                    Instant.now(),
                     "",
                     "LOW_CONFIDENCE"
             );
@@ -68,37 +69,57 @@ public class ITISbot implements LongPollingUpdateConsumer {
         }
     }
 
-    private void handleFeedback(CallbackQuery callbackQuery) {
+    private void handleFeedback(CallbackQuery callbackQuery, String question) {
         String[] data = callbackQuery.getData().split(":");
-        if (data.length != 3 || !data[0].equals("feedback"))
-            return;
+        if (data.length != 3 || !data[0].equals("feedback")) return;
 
         String feedbackType = data[1];
-        int questionHash = Integer.parseInt(data[2]);
-        long userId = callbackQuery.getFrom().getId();
+        Message maybeInaccessibleMessage = (Message) callbackQuery.getMessage();
+
+        String answer = maybeInaccessibleMessage.getText(); // Получаем оригинальный вопрос
+
         long chatId = callbackQuery.getMessage().getChatId();
 
         if (feedbackType.equals("no")) {
             LogEntry log = new LogEntry(
-                    userId,
-                    chatId,
-                    "HASH:" + questionHash, // Сохраняем хеш вопроса
-                    "", // Ответ уже есть в предыдущих логах
-                    0.0, // Нулевая уверенность для негативных отзывов
-                    Instant.now(),
-                    "",
+                    callbackQuery.getFrom().getId(),
+                    callbackQuery.getMessage().getChatId(),
+                    question,
+                    answer, // Сохраняем полный текст вопроса
+                    0.0,
+                    "Пользователь отметил ответ как неполезный",
                     "BAD_FEEDBACK"
             );
             LOGGER_BOT.addLog(log);
+
+            // Отправляем уведомление
+            sendNegativeFeedbackAlert(callbackQuery.getMessage().getChatId(), answer);
         }
 
         try {
             CLIENT.execute(SendMessage.builder()
                     .chatId(chatId)
-                    .text(feedbackType.equals("yes") ? "Спасибо за отзыв!" : "Мы учтем ваш отзыв и улучшим ответ!")
+                    .text(feedbackType.equals("yes") ? "Спасибо за отзыв! \uD83D\uDCA1" : "Мы учтем ваш отзыв и улучшим ответ! \uD83D\uDCDD")
                     .build());
         } catch (TelegramApiException e) {
             System.err.println("Ошибка отправки подтверждения: " + e.getMessage());
+        }
+    }
+
+    public void sendNegativeFeedbackAlert(long chatId, String question) {
+        String message = "🚨 Негативный отзыв на вопрос:\n\n" +
+                "❓ Вопрос:\n" + question + "\n\n" +
+                "\uD83D\uDCACПриемная комиссия: " + String.join(" ", Secrets.getAdmission());
+
+        SendMessage alert = SendMessage.builder()
+                .chatId(chatId)
+                .text(message)
+                .build();
+
+        try {
+            CLIENT.execute(alert);
+        } catch (TelegramApiException e) {
+            System.err.println("Ошибка отправки алерта: " + e.getMessage());
         }
     }
 }
