@@ -50,10 +50,9 @@ public class DevLoggerBot implements LongPollingUpdateConsumer {
 
             if (!update.hasMessage() || !update.getMessage().hasText()) continue;
 
-            User user = update.getMessage().getFrom();
-            if (!AuthUtils.isDeveloper(user.getId())) {
-                sendAccessDenied(update.getMessage().getChatId());
-                continue;
+            if (!AuthUtils.isAdmin(update.getMessage().getFrom().getId())) {
+//                COMMAND_HANDLER.sendMessage(update.getMessage(), "❌ Доступ запрещен");
+                return;
             }
 
             COMMAND_HANDLER.handle(update.getMessage());
@@ -62,8 +61,8 @@ public class DevLoggerBot implements LongPollingUpdateConsumer {
 
     private void handleCallback(CallbackQuery callbackQuery) {
         String data = callbackQuery.getData();
-        if (data.startsWith("/add") || data.startsWith("/get") || data.startsWith("/remove"))
-            COMMAND_HANDLER.handleCallbackFromAdminPanel(callbackQuery);
+//        if (data.startsWith("/add") || data.startsWith("/get") || data.startsWith("/remove"))
+//            COMMAND_HANDLER.handleCallbackFromAdminPanel(callbackQuery);
 //            COMMAND_HANDLER.sendMessageWithAdminPanel(callbackQuery.getMessage().getChatId(), String.valueOf(callbackQuery.getFrom().getId()));
     }
 }

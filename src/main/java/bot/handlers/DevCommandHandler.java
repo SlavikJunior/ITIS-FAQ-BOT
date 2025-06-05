@@ -6,7 +6,6 @@ import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
@@ -18,18 +17,19 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Set;
 
 import bot.shared.LogEntry;
 import bot.DevLoggerBot;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 public class DevCommandHandler {
-    private final TelegramClient CLIENT;
+    private static TelegramClient client;
     private final DevLoggerBot BOT;
     private static final int MAX_INLINE_LOGS = 10;// Максимум логов в сообщении
 
     public DevCommandHandler(TelegramClient client, DevLoggerBot bot) {
-        CLIENT = client;
+        DevCommandHandler.client = client;
         BOT = bot;
     }
 
@@ -40,7 +40,7 @@ public class DevCommandHandler {
         if (text.equals("/start") || text.equals("/start@DEV_ITIS_FAQ_BOT"))
             sendMessage(chatId, "Этот бот нужен для отслеживания логов бота @ITIS_FAQ_BOT \uD83C\uDF93");
         else if (text.equals("/admin") || text.equals("/admin@DEV_ITIS_FAQ_BOT"))
-            sendMessageWithAdminPanel(message.getChatId(), message.getFrom().getId(), message.getMessageId());
+            sendAdminPanel(message.getChatId());
         else if (text.equals("/help") || text.equals("/help@DEV_ITIS_FAQ_BOT")) {
             sendMessage(chatId, """
                 📜 *Доступные команды*:
@@ -102,7 +102,7 @@ public class DevCommandHandler {
                     .document(new InputFile(file, fileName))
                     .build();
 
-            CLIENT.execute(doc);
+            client.execute(doc);
 
         } catch (IOException e) {
             sendMessage(chatId, "📛 Ошибка создания файла логов: " + e.getMessage());
@@ -150,133 +150,140 @@ public class DevCommandHandler {
         SendMessage msg = new SendMessage(String.valueOf(chatId), text);
         msg.enableMarkdown(true);
         try {
-            CLIENT.execute(msg);
+            client.execute(msg);
         } catch (TelegramApiException e) {
             System.out.println("Ошибка отправки сообщения из бота логера!");
         }
     }
 
-    private void sendMessage(long chatId, String text) {
+    public void sendMessage(long chatId, String text) {
         SendMessage msg = new SendMessage(String.valueOf(chatId), text);
         try {
-            CLIENT.execute(msg);
+            client.execute(msg);
         } catch (TelegramApiException e) {
             System.out.println("Ошибка отправки сообщения из бота логера!");
         }
     }
 
-    private InlineKeyboardMarkup createAdminPanel(long adminUserId) {
-        InlineKeyboardButton buttonAdd = InlineKeyboardButton.builder()
-                .text("Добавить жука \uD83D\uDCDD")
-                .switchInlineQueryCurrentChat("/add ")
+    private InlineKeyboardMarkup createAdminKeyboard() {
+        InlineKeyboardButton addButton = InlineKeyboardButton.builder()
+                .text("➕ Добавить жука")
+                .callbackData("admin_add")
                 .build();
 
-        InlineKeyboardButton buttonGet = InlineKeyboardButton.builder()
-                .text("Список жуков \uD83E\uDEB5")
-                .callbackData("/get")
+        InlineKeyboardButton removeButton = InlineKeyboardButton.builder()
+                .text("➖ Удалить жука")
+                .callbackData("admin_remove")
                 .build();
 
-        InlineKeyboardButton buttonRemove = InlineKeyboardButton.builder()
-                .text("Удалить жука \uD83D\uDD04")
-                .switchInlineQueryCurrentChat("/remove ")
+        InlineKeyboardButton listButton = InlineKeyboardButton.builder()
+                .text("📋 Список жуков")
+                .callbackData("admin_list")
                 .build();
 
-        return new InlineKeyboardMarkup(List.of(
-                new InlineKeyboardRow(buttonAdd, buttonRemove),
-                new InlineKeyboardRow(buttonGet)
-        ));
+        return InlineKeyboardMarkup.builder()
+                .keyboardRow(new InlineKeyboardRow(addButton, removeButton))
+                .keyboardRow(new InlineKeyboardRow(listButton))
+                .build();
     }
 
-    public void sendMessageWithAdminPanel(long chatId, long userId, long messageId) {
-        InlineKeyboardMarkup keyboard = createAdminPanel(userId);
-
+    private void sendAdminPanel(long chatId) {
         SendMessage message = SendMessage.builder()
                 .chatId(chatId)
-                .text("Панелька управления жуками \uD83E\uDEB5")
-                .replyMarkup(keyboard)
+                .text("🛠️ *Панель управления жуками*")
+                .replyMarkup(createAdminKeyboard())
                 .build();
 
         try {
-            CLIENT.execute(message);
+            client.execute(message);
         } catch (TelegramApiException e) {
-            System.out.println("Ошибка отправки сообщения из бота логера!");        }
+            System.err.println("Ошибка отправки админ-панели: " + e.getMessage());
+        }
     }
 
-    public void handleCallbackFromAdminPanel(CallbackQuery callbackQuery) {
+    public void handleTextAfterCallback(Message message) {
+        // Проверяем, был ли это ответ на запрос ID
+        if (message.getReplyToMessage() != null &&
+                message.getReplyToMessage().getText().contains("Введите ID жука")) {
+
+            String command = message.getReplyToMessage().getText();
+            String userIdStr = message.getText().trim();
+
+            if (command.contains("добавления")) {
+                Secrets.handleAddRequest(message.getChatId(), userIdStr);
+            } else if (command.contains("удаления")) {
+                Secrets.handleRemoveRequest(message.getChatId(), userIdStr);
+            }
+        }
+    }
+
+    public void handleAdminCallback(CallbackQuery callbackQuery) {
+        long userId = callbackQuery.getFrom().getId();
+        long chatId = callbackQuery.getMessage().getChatId();
+
+        if (!AuthUtils.isAdmin(userId)) {
+            answerCallbackQuery(callbackQuery.getId(), "❌ Доступ запрещен");
+            return;
+        }
+
+        String action = callbackQuery.getData();
         try {
-            String[] data = callbackQuery.getData().split(" ");
-            if (data.length < 2) {
-                answerCallbackQuery(callbackQuery.getId(), "❌ Неверный формат команды");
-                return;
+            switch (action) {
+                case "admin_add":
+                    client.execute(SendMessage.builder()
+                            .chatId(chatId)
+                            .text("Введите ID жука для добавления:")
+                            .build());
+                    break;
+
+                case "admin_remove":
+                    client.execute(SendMessage.builder()
+                            .chatId(chatId)
+                            .text("Введите ID жука для удаления:")
+                            .build());
+                    break;
+
+                case "admin_list":
+                    Set<String> users = Secrets.getAlarmUserIds();
+                    String response = users.isEmpty()
+                            ? "📋 Список жуков пуст"
+                            : "📋 Список жуков:\n" + String.join("\n", users);
+                    client.execute(SendMessage.builder()
+                            .chatId(chatId)
+                            .text(response)
+                            .build());
+                    break;
             }
 
-            String command = data[0];
-            long currentUserId = callbackQuery.getFrom().getId();
+            // Удаляем клавиатуру после выбора
+            client.execute(EditMessageReplyMarkup.builder()
+                    .chatId(chatId)
+                    .messageId(callbackQuery.getMessage().getMessageId())
+                    .replyMarkup(null)
+                    .build());
 
-            // Проверяем права доступа (только админы могут управлять жуками)
-            if (!AuthUtils.isDeveloper(currentUserId)) {
-                answerCallbackQuery(callbackQuery.getId(), "❌ У вас нет прав администратора");
-                return;
-            }
-
-            String responseText;
-
-            if (command.equals("/add") && data.length >= 2) {
-                // Обработка добавления с указанием ID
-                String targetUserId = data[1];
-                try {
-                    Secrets.addAlarmUserId(targetUserId);
-                    responseText = "✅ Жук " + targetUserId + " добавлен";
-                } catch (NumberFormatException e) {
-                    responseText = "❌ Неверный ID пользователя";
-                }
-            }
-            else if (command.equals("/remove") && data.length >= 2) {
-                // Обработка удаления с указанием ID
-                String targetUserId = data[1];
-                boolean isRemoved = Secrets.removeAlarmUserId(targetUserId);
-                responseText = isRemoved ?
-                        "✅ Жук " + targetUserId + " удалён" :
-                        "❌ Жук " + targetUserId + " не найден";
-            }
-            else if (command.equals("/get")) {
-                // Показ списка
-                String usersList = String.join("\n", Secrets.getAlarmUserIds());
-                responseText = "📋 Список жуков:\n" + (usersList.isEmpty() ? "Список пуст" : usersList);
-            }
-            else {
-                responseText = "⚠ Неизвестная команда";
-            }
-
-            // Отправляем ответ
-            answerCallbackQuery(callbackQuery.getId(), responseText);
-
-            // Обновляем сообщение с панелью
-            try {
-                CLIENT.execute(EditMessageText.builder()
-                        .chatId(String.valueOf(callbackQuery.getMessage().getChatId()))
-                        .messageId(callbackQuery.getMessage().getMessageId())
-                        .text(responseText)
-                        .replyMarkup(null)
-                        .build());
-            } catch (TelegramApiException e) {
-                System.out.println("Ошибка обновления сообщения: " + e.getMessage());
-            }
-
-        } catch (Exception e) {
-            System.out.println("Ошибка обработки callback: " + e.getMessage());
-            answerCallbackQuery(callbackQuery.getId(), "⚠ Ошибка обработки запроса");
+        } catch (TelegramApiException e) {
+            System.err.println("Ошибка обработки callback: " + e.getMessage());
         }
     }
 
     private void answerCallbackQuery(String callbackQueryId, String text) {
         try {
-            CLIENT.execute(AnswerCallbackQuery.builder()
+            client.execute(AnswerCallbackQuery.builder()
                     .callbackQueryId(callbackQueryId)
                     .text(text)
                     .build());
         } catch (TelegramApiException e) {
             System.out.println("Ошибка отправки ответа на коллбек!");
+        }
+    }
+
+    public static void sendMessageStatic(long chatId, String text) {
+        SendMessage msg = new SendMessage(String.valueOf(chatId), text);
+        try {
+            client.execute(msg);
+        } catch (TelegramApiException e) {
+            System.out.println("Ошибка отправки сообщения из бота логера!");
         }
     }
 }
