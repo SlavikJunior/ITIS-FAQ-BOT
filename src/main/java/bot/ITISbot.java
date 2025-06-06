@@ -9,6 +9,7 @@ import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsume
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
@@ -31,25 +32,42 @@ public class ITISbot implements LongPollingUpdateConsumer {
     @Override
     public void consume(List<Update> updates) {
         for (Update update : updates) {
-            String question = "";
+            if (update.hasMessage()) {
+                User user = update.getMessage().getFrom();
+                if (Secrets.isAlarmUser(String.valueOf(user.getId()))) {
+//                    CLIENT.execute(какойто executable или BotApiMethod)
+                    MESSAGE_HANDLER.sendMessage(update.getMessage().getChatId(), "\uD83D\uDEA8 Мы не обрабатываем сообщения от жуков \uD83E\uDEB5");
+                    continue;
+                }
+            }
+
+            String text = "";
             if (update.hasMessage() && update.getMessage().hasText()) {
-                question = update.getMessage().getText();
+                text = update.getMessage().getText();
                 long userId = update.getMessage().getFrom().getId();
                 long chatId = update.getMessage().getChatId();
 
-                // Получаем ответ от модели (заглушка)
-                // наверное будет приходить какой-то объект и в нём будет
-                // и ответ и уверенность, не надо будет опрашивать два раза
-                String answer = FAQmodel.getAnswer(question);
-                double confidence = FAQmodel.getConfidence(question);
+                if (text.equals("/start") || text.equals("/start@ITIS_FAQ_BOT"))
+                    MESSAGE_HANDLER.sendMessage(chatId, "\uD83E\uDD16 FAQ-бот приёмной комиссии. Помогаю абитуриентам поступить!");
+                else if (text.equals("/help") || text.equals("/help@ITIS_FAQ_BOT"))
+                    MESSAGE_HANDLER.sendMessage(chatId, "\uD83D\uDCA1 Попробуй /ask и напиши свой вопросик");
+                else if (text.equals("/ask") || text.equals("/ask@ITIS_FAQ_BOT")) {
+                    MESSAGE_HANDLER.sendMessage(chatId, "\uD83D\uDEA8 Мы не обрабатываем пустые запросы");
+                } else if (text.startsWith("/ask ") || text.startsWith("/ask@ITIS_FAQ_BOT ")) {
+                    // Получаем ответ от модели (заглушка)
+                    // наверное будет приходить какой-то объект и в нём будет
+                    // и ответ и уверенность, не надо будет опрашивать два раза
+                    String answer = FAQmodel.getAnswer(text);
+                    double confidence = FAQmodel.getConfidence(text);
 
-                // Логируем проблемные ответы
-                handleConfidence(confidence, userId, chatId, question, answer);
+                    // Логируем проблемные ответы
+                    handleConfidence(confidence, userId, chatId, text, answer);
 
-                // Отправляем ответ пользователю
-                MESSAGE_HANDLER.sendAnswer(chatId, question, answer);
+                    // Отправляем ответ пользователю
+                    MESSAGE_HANDLER.sendAnswer(chatId, answer);
+                }
             } else if (update.hasCallbackQuery()) {
-                handleFeedback(update.getCallbackQuery(), question);
+                handleFeedback(update.getCallbackQuery(), text);
             }
         }
     }
@@ -62,7 +80,7 @@ public class ITISbot implements LongPollingUpdateConsumer {
                     question,
                     answer,
                     confidence,
-                    "",
+                    "Автоматически добавленный лог",
                     "LOW_CONFIDENCE"
             );
             LOGGER_BOT.addLog(log);
@@ -71,7 +89,7 @@ public class ITISbot implements LongPollingUpdateConsumer {
 
     private void handleFeedback(CallbackQuery callbackQuery, String question) {
         String[] data = callbackQuery.getData().split(":");
-        if (data.length != 3 || !data[0].equals("feedback")) return;
+        if (data.length != 2 || !data[0].equals("feedback")) return;
 
         String feedbackType = data[1];
         Message maybeInaccessibleMessage = (Message) callbackQuery.getMessage();
@@ -120,6 +138,12 @@ public class ITISbot implements LongPollingUpdateConsumer {
             CLIENT.execute(alert);
         } catch (TelegramApiException e) {
             System.err.println("Ошибка отправки алерта: " + e.getMessage());
+        }
+    }
+
+    private void handleUser(User user) {
+        if (Secrets.isAlarmUser(String.valueOf(user.getId()))) {
+
         }
     }
 }
