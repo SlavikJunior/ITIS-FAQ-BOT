@@ -45,7 +45,7 @@ public class DevCommandHandler {
                     📜 Доступные команды:
                     /start - начать использовать админского бота
                     /help - получить это сообщение
-                    /admin - админская панель управления жучим криминалом 
+                    /admin - админская панель управления жучим криминалом
                     /logs — все логи
                     /logs N — последние N логов
                     """);
@@ -57,6 +57,20 @@ public class DevCommandHandler {
                 sendLastLogs(chatId, limit); // Мало логов → сообщением
             else
                 sendLogsFile(chatId, BOT.getLogs(limit), "last_" + limit + "_logs.txt");  // Много логов → файлом
+        } else if (message.getReplyToMessage() != null && message.getReplyToMessage().hasText()) {
+            Message repliedTo = message.getReplyToMessage();
+            if (repliedTo.getText().equals("❓ Ты сделаешь это?\nТогда введи: <Конец жучьему криминалу> в ответ на это сообщение \uD83D\uDEA8") &&
+                    message.hasText() && message.getText().equals("Конец жучьему криминалу")) {
+                Secrets.clearAlarmUsersIds();
+                try {
+                    execute(SendMessage.builder()
+                            .text("\uD83D\uDCCC Вот и закончился криминал")
+                            .chatId(chatId)
+                            .build());
+                } catch (TelegramApiException e) {
+                    System.out.println("Ошибка отправки уведомления конца криминала!");
+                }
+            }
         } else
             sendMessage(chatId, "Неопознанная команда! ⚠");
     }
@@ -187,9 +201,15 @@ public class DevCommandHandler {
                 .callbackData("admin_list")
                 .build();
 
+        InlineKeyboardButton clearButton = InlineKeyboardButton.builder()
+                .text("\uD83D\uDEA8 Очистить список жуков")
+                .callbackData("admin_clear")
+                .build();
+
         return InlineKeyboardMarkup.builder()
                 .keyboardRow(new InlineKeyboardRow(addButton, removeButton))
                 .keyboardRow(new InlineKeyboardRow(listButton))
+                .keyboardRow(new InlineKeyboardRow(clearButton))
                 .build();
     }
 
@@ -223,6 +243,15 @@ public class DevCommandHandler {
                     execute(SendMessage.builder()
                             .chatId(chatId)
                             .text(response)
+                            .build());
+                    break;
+
+                case "admin_clear":
+                    String answer = "Ты сделаешь это? ❓\nТогда введи: <Конец жучьему криминалу> в ответ на это сообщение \uD83D\uDEA8";
+
+                    execute(SendMessage.builder()
+                            .chatId(chatId)
+                            .text(answer)
                             .build());
                     break;
 
