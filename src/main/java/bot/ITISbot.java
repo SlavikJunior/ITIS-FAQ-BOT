@@ -21,6 +21,7 @@ public class ITISbot implements LongPollingUpdateConsumer {
     private final MessageHandler MESSAGE_HANDLER;
     private final DevLoggerBot LOGGER_BOT;
     private final FAQmodel FAQmodel;
+    private final double LOW_CONFIDENCE = 0.7;
 
     public ITISbot(DevLoggerBot loggerBot) {
         this.CLIENT = new OkHttpTelegramClient(Secrets.TOKEN);
@@ -73,7 +74,7 @@ public class ITISbot implements LongPollingUpdateConsumer {
     }
 
     private void handleConfidence(double confidence, long userId, long chatId, String question, String answer) {
-        if (confidence < 0.7) {
+        if (confidence < LOW_CONFIDENCE) {
             LogEntry log = new LogEntry(
                     userId,
                     chatId,
@@ -138,12 +139,6 @@ public class ITISbot implements LongPollingUpdateConsumer {
             CLIENT.execute(alert);
         } catch (TelegramApiException e) {
             System.err.println("Ошибка отправки алерта: " + e.getMessage());
-        }
-    }
-
-    private void handleUser(User user) {
-        if (Secrets.isAlarmUser(String.valueOf(user.getId()))) {
-
         }
     }
 }

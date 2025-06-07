@@ -80,7 +80,7 @@ public class DevLoggerBot implements LongPollingUpdateConsumer {
 
                     // Обработка ответов на запросы ID
                     else if (message.getReplyToMessage() != null && message.hasText() && message.getText().equals("Конец жучьему криминалу")) {
-                        COMMAND_HANDLER.handle(message);
+                        COMMAND_HANDLER.handleClearCommand(message);
                     }
 
                     else if (message.getReplyToMessage() != null) {

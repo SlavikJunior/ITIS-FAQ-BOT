@@ -57,20 +57,6 @@ public class DevCommandHandler {
                 sendLastLogs(chatId, limit); // Мало логов → сообщением
             else
                 sendLogsFile(chatId, BOT.getLogs(limit), "last_" + limit + "_logs.txt");  // Много логов → файлом
-        } else if (message.getReplyToMessage() != null && message.getReplyToMessage().hasText()) {
-            Message repliedTo = message.getReplyToMessage();
-            if (repliedTo.getText().equals("❓ Ты сделаешь это?\nТогда введи: <Конец жучьему криминалу> в ответ на это сообщение \uD83D\uDEA8") &&
-                    message.hasText() && message.getText().equals("Конец жучьему криминалу")) {
-                Secrets.clearAlarmUsersIds();
-                try {
-                    execute(SendMessage.builder()
-                            .text("\uD83D\uDCCC Вот и закончился криминал")
-                            .chatId(chatId)
-                            .build());
-                } catch (TelegramApiException e) {
-                    System.out.println("Ошибка отправки уведомления конца криминала!");
-                }
-            }
         } else
             sendMessage(chatId, "Неопознанная команда! ⚠");
     }
@@ -170,6 +156,20 @@ public class DevCommandHandler {
             System.out.println("Ошибка отправки сообщения из бота логера!");
         }
     }
+
+    public void handleClearCommand(Message message) {
+        if (message.hasText() && message.getText().equals("Конец жучьему криминалу"))
+            Secrets.clearAlarmUsersIds();
+        try {
+            execute(SendMessage.builder()
+                    .text("\uD83D\uDCCC Вот и закончился криминал")
+                    .chatId(message.getChatId())
+                    .build());
+        } catch (TelegramApiException e) {
+            System.out.println("Ошибка отправки уведомления конца криминала!");
+        }
+    }
+
 
     private void sendAdminPanel(long chatId) {
         SendMessage message = SendMessage.builder()
