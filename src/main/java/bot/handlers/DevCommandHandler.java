@@ -159,7 +159,7 @@ public class DevCommandHandler {
 
     public void handleClearCommand(Message message) {
         if (message.hasText() && message.getText().equals("Конец жучьему криминалу"))
-            Secrets.clearAlarmUsersIds();
+            Secrets.clearAlarmUsers();
         try {
             execute(SendMessage.builder()
                     .text("\uD83D\uDCCC Вот и закончился криминал")
@@ -206,9 +206,20 @@ public class DevCommandHandler {
                 .callbackData("admin_clear")
                 .build();
 
+        InlineKeyboardButton changeButton = InlineKeyboardButton.builder()
+                .text("\uD83D\uDCA1 Изменить ответ жуку")
+                .callbackData("admin_change")
+                .build();
+
+        InlineKeyboardButton resetButton = InlineKeyboardButton.builder()
+                .text("\uD83D\uDD04 Вернуть стандартный ответ жуку")
+                .callbackData("admin_reset")
+                .build();
+
         return InlineKeyboardMarkup.builder()
                 .keyboardRow(new InlineKeyboardRow(addButton, removeButton))
                 .keyboardRow(new InlineKeyboardRow(listButton))
+                .keyboardRow(new InlineKeyboardRow(changeButton, resetButton))
                 .keyboardRow(new InlineKeyboardRow(clearButton))
                 .build();
     }
@@ -236,10 +247,10 @@ public class DevCommandHandler {
                     break;
 
                 case "admin_list":
-                    Set<String> users = Secrets.getAlarmUserIds();
+                    Set<Secrets.AlarmUser> users = Secrets.getAlarmUsers();
                     String response = users.isEmpty()
                             ? "📋 Список жуков пуст"
-                            : "📋 Список жуков:\n" + String.join("\n", users);
+                            : "📋 Список жуков:\n" + String.join("\n", users.toString());
                     execute(SendMessage.builder()
                             .chatId(chatId)
                             .text(response)
@@ -261,6 +272,24 @@ public class DevCommandHandler {
                             .messageId(callbackQuery.getMessage().getMessageId())
                             .build());
                     return;
+
+                case "admin_change":
+                    execute(SendMessage.builder()
+                            .chatId(chatId)
+                            .text("\uD83D\uDD04 Введите ID жука и через пробел сообщение," +
+                                    " которое он должен увидеть:")
+                            .replyMarkup(createCancelKeyboard())
+                            .build());
+                    break;
+
+                case "admin_reset":
+                    execute(SendMessage.builder()
+                            .chatId(chatId)
+                            .text("\uD83D\uDD04 Введите ID жука, для которого" +
+                                    " нужно задать стандартный ответ:")
+                            .replyMarkup(createCancelKeyboard())
+                            .build());
+                    break;
             }
 
             // Удаляем исходную клавиатуру
@@ -287,6 +316,10 @@ public class DevCommandHandler {
                     Secrets.handleAddRequest(chatId, userInput);
                 } else if (requestText.contains("удаления"))
                     Secrets.handleRemoveRequest(chatId, userInput);
+                else if (requestText.contains("Введите ID жука и через пробел сообщение"))
+                    Secrets.handleChangeRequest(chatId, message);
+                else if (requestText.contains("Введите ID жука, для которого нужно"))
+                    Secrets.handleResetRequest(chatId, message);
                 else {
                     execute(SendMessage.builder()
                             .chatId(chatId)

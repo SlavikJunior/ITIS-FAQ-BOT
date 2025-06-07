@@ -1,6 +1,7 @@
 package bot.handlers;
 
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
@@ -28,17 +29,18 @@ public class MessageHandler {
         }
     }
 
-    public void sendAnswer(long chatId,String answer) {
+    public Message sendAnswer(long chatId, String answer) {
         SendMessage message = SendMessage.builder()
                 .chatId(chatId)
                 .text(answer)
                 .replyMarkup(createFeedbackButtons())
                 .build();
         try {
-            CLIENT.execute(message);
+            return CLIENT.execute(message);
         } catch (TelegramApiException e) {
             System.out.println("Ошибка отправки ответа: " + e.getMessage());
         }
+        return null;
     }
 
     private InlineKeyboardMarkup createFeedbackButtons() {

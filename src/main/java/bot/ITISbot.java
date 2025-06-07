@@ -4,9 +4,11 @@ import bot.handlers.MessageHandler;
 import bot.shared.FAQmodel;
 import bot.shared.LogEntry;
 
+import bot.shared.MessageStorage;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
@@ -22,12 +24,14 @@ public class ITISbot implements LongPollingUpdateConsumer {
     private final DevLoggerBot LOGGER_BOT;
     private final FAQmodel FAQmodel;
     private final double LOW_CONFIDENCE = 0.7;
+    private final MessageStorage MESSAGE_STORAGE;
 
     public ITISbot(DevLoggerBot loggerBot) {
-        this.CLIENT = new OkHttpTelegramClient(Secrets.TOKEN);
-        this.LOGGER_BOT = loggerBot;
-        this.FAQmodel = new FAQmodel("path/to/model.bin");
-        this.MESSAGE_HANDLER = new MessageHandler(CLIENT);
+        CLIENT = new OkHttpTelegramClient(Secrets.TOKEN);
+        LOGGER_BOT = loggerBot;
+        FAQmodel = new FAQmodel("path/to/model.bin");
+        MESSAGE_HANDLER = new MessageHandler(CLIENT);
+        MESSAGE_STORAGE = new MessageStorage();
     }
 
     @Override
@@ -36,13 +40,15 @@ public class ITISbot implements LongPollingUpdateConsumer {
             if (update.hasMessage()) {
                 User user = update.getMessage().getFrom();
                 if (Secrets.isAlarmUser(String.valueOf(user.getId()))) {
-//                    CLIENT.execute(какойто executable или BotApiMethod)
-                    MESSAGE_HANDLER.sendMessage(update.getMessage().getChatId(), "\uD83D\uDEA8 Мы не обрабатываем сообщения от жуков \uD83E\uDEB5");
+                    MESSAGE_HANDLER.sendMessage(
+                            update.getMessage().getChatId(),
+                            Secrets.getAnswerForAlarmUser(
+                                    String.valueOf(user.getId())));
                     continue;
                 }
             }
 
-            String text = "";
+            String text;
             if (update.hasMessage() && update.getMessage().hasText()) {
                 text = update.getMessage().getText();
                 long userId = update.getMessage().getFrom().getId();
@@ -55,20 +61,27 @@ public class ITISbot implements LongPollingUpdateConsumer {
                 else if (text.equals("/ask") || text.equals("/ask@ITIS_FAQ_BOT")) {
                     MESSAGE_HANDLER.sendMessage(chatId, "\uD83D\uDEA8 Мы не обрабатываем пустые запросы");
                 } else if (text.startsWith("/ask ") || text.startsWith("/ask@ITIS_FAQ_BOT ")) {
+                    String question;
+                    if (text.startsWith("/ask "))
+                        question = text.replace("/ask ", "");
+                    else
+                        question = text.replace("/ask@ITIS_FAQ_BOT ", "");
                     // Получаем ответ от модели (заглушка)
                     // наверное будет приходить какой-то объект и в нём будет
                     // и ответ и уверенность, не надо будет опрашивать два раза
-                    String answer = FAQmodel.getAnswer(text);
-                    double confidence = FAQmodel.getConfidence(text);
+                    String answer = FAQmodel.getAnswer(question);
+                    double confidence = FAQmodel.getConfidence(question);
 
                     // Логируем проблемные ответы
-                    handleConfidence(confidence, userId, chatId, text, answer);
+                    handleConfidence(confidence, userId, chatId, question, answer);
 
-                    // Отправляем ответ пользователю
-                    MESSAGE_HANDLER.sendAnswer(chatId, answer);
+                    // Отправляем ответ пользователю и получаем отправленное сообщение в случае успеха
+                    Message answerMessage = MESSAGE_HANDLER.sendAnswer(chatId, answer);
+                    if (answerMessage != null)
+                        MESSAGE_STORAGE.put(answerMessage.getMessageId(), new MessageStorage.QuestionInfo(update.getMessage().getFrom().getId(), question));
                 }
             } else if (update.hasCallbackQuery()) {
-                handleFeedback(update.getCallbackQuery(), text);
+                handleFeedback(update.getCallbackQuery());
             }
         }
     }
@@ -88,21 +101,35 @@ public class ITISbot implements LongPollingUpdateConsumer {
         }
     }
 
-    private void handleFeedback(CallbackQuery callbackQuery, String question) {
+    private void handleFeedback(CallbackQuery callbackQuery) {
+        User pushedUser = callbackQuery.getFrom(); // тот, кто нажал на кнопку
+        long chatId = callbackQuery.getMessage().getChatId();
+        Integer messageId = callbackQuery.getMessage().getMessageId();
+
+        if (!MESSAGE_STORAGE.isAsked(pushedUser.getId())) {
+            // просто игнорим если фидбечит не тот, кто спрашивал текущий вопрос
+            return;
+        }
+
         String[] data = callbackQuery.getData().split(":");
-        if (data.length != 2 || !data[0].equals("feedback")) return;
+        if (data.length != 2 || !data[0].equals("feedback"))
+            return;
+
+        String question = MESSAGE_STORAGE.get(messageId).getQuestion();
+        MessageStorage.QuestionInfo info = MESSAGE_STORAGE.get(messageId);
+        if (info == null)
+            return; // сообщение не найдено
+
 
         String feedbackType = data[1];
         Message maybeInaccessibleMessage = (Message) callbackQuery.getMessage();
 
         String answer = maybeInaccessibleMessage.getText(); // Получаем оригинальный вопрос
 
-        long chatId = callbackQuery.getMessage().getChatId();
-
         if (feedbackType.equals("no")) {
             LogEntry log = new LogEntry(
-                    callbackQuery.getFrom().getId(),
-                    callbackQuery.getMessage().getChatId(),
+                    pushedUser.getId(),
+                    chatId,
                     question,
                     answer, // Сохраняем полный текст вопроса
                     0.0,
@@ -112,20 +139,30 @@ public class ITISbot implements LongPollingUpdateConsumer {
             LOGGER_BOT.addLog(log);
 
             // Отправляем уведомление
-            sendNegativeFeedbackAlert(callbackQuery.getMessage().getChatId(), answer);
+            sendNegativeFeedbackAlert(chatId, question, messageId);
+        }
+
+        try {
+            CLIENT.execute(EditMessageReplyMarkup.builder()
+                    .chatId(chatId)
+                    .messageId(callbackQuery.getMessage().getMessageId())
+                    .replyMarkup(null)
+                    .build());
+        } catch (TelegramApiException e) {
+            System.out.println("Ошибка во вреям удаления панели для фидбека!");
         }
 
         try {
             CLIENT.execute(SendMessage.builder()
                     .chatId(chatId)
-                    .text(feedbackType.equals("yes") ? "Спасибо за отзыв! \uD83D\uDCA1" : "Мы учтем ваш отзыв и улучшим ответ! \uD83D\uDCDD")
+                    .text(feedbackType.equals("yes") ? "Спасибо за отзыв! \uD83D\uDC4D" : "Мы учтем ваш отзыв и улучшим ответ! \uD83D\uDCDD")
                     .build());
         } catch (TelegramApiException e) {
             System.err.println("Ошибка отправки подтверждения: " + e.getMessage());
         }
     }
 
-    public void sendNegativeFeedbackAlert(long chatId, String question) {
+    public void sendNegativeFeedbackAlert(long chatId, String question, Integer messageId) {
         String message = "🚨 Негативный отзыв на вопрос:\n\n" +
                 "❓ Вопрос:\n" + question + "\n\n" +
                 "\uD83D\uDCACПриемная комиссия: " + String.join(" ", Secrets.getAdmission());
@@ -140,5 +177,6 @@ public class ITISbot implements LongPollingUpdateConsumer {
         } catch (TelegramApiException e) {
             System.err.println("Ошибка отправки алерта: " + e.getMessage());
         }
+        MESSAGE_STORAGE.remove(messageId); // и в конце, когда все операции с сообщением выполнены, мы его удаляем
     }
 }
