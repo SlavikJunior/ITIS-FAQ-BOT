@@ -1,7 +1,7 @@
 package bot;
 
 import bot.handlers.MessageHandler;
-import bot.shared.FAQmodel;
+import bot.shared.FAQclient;
 import bot.shared.LogEntry;
 
 import bot.shared.MessageStorage;
@@ -22,14 +22,11 @@ public class ITISbot implements LongPollingUpdateConsumer {
     private final TelegramClient CLIENT;
     private final MessageHandler MESSAGE_HANDLER;
     private final DevLoggerBot LOGGER_BOT;
-    private final FAQmodel FAQmodel;
-    private final double LOW_CONFIDENCE = 0.7;
     private final MessageStorage MESSAGE_STORAGE;
 
     public ITISbot(DevLoggerBot loggerBot) {
         CLIENT = new OkHttpTelegramClient(Secrets.TOKEN);
         LOGGER_BOT = loggerBot;
-        FAQmodel = new FAQmodel("path/to/model.bin");
         MESSAGE_HANDLER = new MessageHandler(CLIENT);
         MESSAGE_STORAGE = new MessageStorage();
     }
@@ -66,19 +63,16 @@ public class ITISbot implements LongPollingUpdateConsumer {
                         question = text.replace("/ask ", "");
                     else
                         question = text.replace("/ask@ITIS_FAQ_BOT ", "");
-                    // Получаем ответ от модели (заглушка)
-                    // наверное будет приходить какой-то объект и в нём будет
-                    // и ответ и уверенность, не надо будет опрашивать два раза
-                    String answer = FAQmodel.getAnswer(question);
-                    double confidence = FAQmodel.getConfidence(question);
 
-                    // Логируем проблемные ответы
-                    handleConfidence(confidence, userId, chatId, question, answer);
-
-                    // Отправляем ответ пользователю и получаем отправленное сообщение в случае успеха
-                    Message answerMessage = MESSAGE_HANDLER.sendAnswer(chatId, answer);
-                    if (answerMessage != null)
-                        MESSAGE_STORAGE.put(answerMessage.getMessageId(), new MessageStorage.QuestionInfo(update.getMessage().getFrom().getId(), question));
+                    String answer = FAQclient.ask(question);
+                    answer = handleAnswer(answer, userId, chatId, question);
+                    if (!answer.isEmpty()) {
+                        // Отправляем ответ пользователю и получаем отправленное сообщение в случае успеха
+                        Message answerMessage = MESSAGE_HANDLER.sendAnswer(chatId, answer);
+                        MESSAGE_STORAGE.put(answerMessage.getMessageId(), new MessageStorage.QuestionInfo(userId, question));
+                    } else {
+                        sendLowConfidenceAlert(chatId, question);
+                    }
                 }
             } else if (update.hasCallbackQuery()) {
                 handleFeedback(update.getCallbackQuery());
@@ -86,19 +80,25 @@ public class ITISbot implements LongPollingUpdateConsumer {
         }
     }
 
-    private void handleConfidence(double confidence, long userId, long chatId, String question, String answer) {
-        if (confidence < LOW_CONFIDENCE) {
+    private String handleAnswer(String answer, long userId, long chatId, String question) {
+        if (answer.equals("LOW_CONFIDENCE")) {
             LogEntry log = new LogEntry(
                     userId,
                     chatId,
                     question,
                     answer,
-                    confidence,
+                    0.0,
                     "Автоматически добавленный лог",
                     "LOW_CONFIDENCE"
             );
             LOGGER_BOT.addLog(log);
+            return "";
         }
+        answer = answer.replace("\"answer\":", "");
+        answer = answer.replace("\"", "");
+        answer = answer.replace("{", "");
+        answer = answer.replace("}", "");
+        return answer;
     }
 
     private void handleFeedback(CallbackQuery callbackQuery) {
@@ -175,8 +175,25 @@ public class ITISbot implements LongPollingUpdateConsumer {
         try {
             CLIENT.execute(alert);
         } catch (TelegramApiException e) {
-            System.err.println("Ошибка отправки алерта: " + e.getMessage());
+            System.err.println("Ошибка отправки алерта плохого фидбека: " + e.getMessage());
         }
         MESSAGE_STORAGE.remove(messageId); // и в конце, когда все операции с сообщением выполнены, мы его удаляем
+    }
+
+    public void sendLowConfidenceAlert(long chatId, String question) {
+        String message = "🚨 Не могу ответить на вопрос:\n\n" +
+                "❓ Вопрос:\n" + question + "\n\n" +
+                "\uD83D\uDCACПриемная комиссия: " + String.join(" ", Secrets.getAdmission());
+
+        SendMessage alert = SendMessage.builder()
+                .chatId(chatId)
+                .text(message)
+                .build();
+
+        try {
+            CLIENT.execute(alert);
+        } catch (TelegramApiException e) {
+            System.err.println("Ошибка отправки алерта низкой уверенности: " + e.getMessage());
+        }
     }
 }
