@@ -10,6 +10,13 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Класс представляет собой функционал ответов @ITIS_FAQ_BOT
+ * @author github.com/SlavikJunior
+ * @version 1.0.0
+ * @since 1.0.0
+ **/
+
 public class MessageHandler {
     private final TelegramClient CLIENT;
 

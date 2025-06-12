@@ -11,11 +11,17 @@ import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Класс описывает @DEV_ITIS_FAQ_BOT.
+ * @author github.com/SlavikJunior
+ * @version 1.0.0
+ * @since 1.0.0
+ **/
 
 public class DevLoggerBot implements LongPollingUpdateConsumer {
     private final TelegramClient CLIENT;
@@ -68,7 +74,7 @@ public class DevLoggerBot implements LongPollingUpdateConsumer {
                     User user = message.getFrom();
 
                     // Проверка прав один раз на входе
-                    if (!AuthUtils.isAdmin(user.getId())) {
+                    if (!AuthUtils.isDeveloper(user.getId())) {
                         sendAccessDenied(message.getChatId());
                         continue;
                     }
