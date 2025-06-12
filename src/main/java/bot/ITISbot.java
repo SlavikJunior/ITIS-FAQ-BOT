@@ -3,7 +3,6 @@ package bot;
 import bot.handlers.MessageHandler;
 import bot.shared.FAQclient;
 import bot.shared.LogEntry;
-
 import bot.shared.MessageStorage;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
@@ -15,8 +14,14 @@ import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
-
 import java.util.List;
+
+/**
+ * Класс описывает @ITIS_FAQ_BOT.
+ * @author github.com/SlavikJunior
+ * @version 1.0.0
+ * @since 1.0.0
+ **/
 
 public class ITISbot implements LongPollingUpdateConsumer {
     private final TelegramClient CLIENT;
@@ -54,7 +59,7 @@ public class ITISbot implements LongPollingUpdateConsumer {
                 if (text.equals("/start") || text.equals("/start@ITIS_FAQ_BOT"))
                     MESSAGE_HANDLER.sendMessage(chatId, "\uD83E\uDD16 FAQ-бот приёмной комиссии. Помогаю абитуриентам поступить!");
                 else if (text.equals("/help") || text.equals("/help@ITIS_FAQ_BOT"))
-                    MESSAGE_HANDLER.sendMessage(chatId, "\uD83D\uDCA1 Попробуй /ask и напиши свой вопросик");
+                    MESSAGE_HANDLER.sendMessage(chatId, "\uD83D\uDCA1 Напиши /ask и задай вопрос");
                 else if (text.equals("/ask") || text.equals("/ask@ITIS_FAQ_BOT")) {
                     MESSAGE_HANDLER.sendMessage(chatId, "\uD83D\uDEA8 Мы не обрабатываем пустые запросы");
                 } else if (text.startsWith("/ask ") || text.startsWith("/ask@ITIS_FAQ_BOT ")) {

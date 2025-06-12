@@ -21,6 +21,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Класс представляет собой функционал ответов @DEV_ITIS_FAQ_BOT
+ * @author github.com/SlavikJunior
+ * @version 1.0.0
+ * @since 1.0.0
+ **/
+
 public class DevCommandHandler {
     private static TelegramClient CLIENT;
     private final DevLoggerBot BOT;

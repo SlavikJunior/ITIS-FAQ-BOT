@@ -3,6 +3,15 @@ package bot.shared;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+/**
+ * Класс описывает сущность одной единицы лога.
+ * Используется при сохранении BAD_FEEDBACK пользователя на ответ модели
+ * и LOW_CONFIDENCE ответе модели.
+ * @author github.com/SlavikJunior
+ * @version 1.0.0
+ * @since 1.0.0
+ **/
+
 public class LogEntry {
 
     private long userId;

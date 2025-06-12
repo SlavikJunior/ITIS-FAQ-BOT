@@ -3,6 +3,13 @@ package bot;
 import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+/**
+ * Класс отвечает за запуск ботов.
+ * @author github.com/SlavikJunior
+ * @version 1.0.0
+ * @since 1.0.0
+ **/
+
 public class BotsRunner {
 
     private static final TelegramBotsLongPollingApplication APP = new TelegramBotsLongPollingApplication();

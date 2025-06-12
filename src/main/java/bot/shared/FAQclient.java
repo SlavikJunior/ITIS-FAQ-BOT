@@ -9,6 +9,14 @@ import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
 
+/**
+ * Класс, взаимодействующий с FastAPI приложением.
+ * Посылает запрос пользователя и получает ответ модели.
+ * @author github.com/SlavikJunior
+ * @version 1.0.0
+ * @since 1.0.0
+ **/
+
 public class FAQclient {
 
     private static final String URL_ADDRESS = "http://localhost:8000/ask";

@@ -3,7 +3,22 @@ package bot.shared;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Класс отвечает за хранение привязки вопроса к отправителю и текста вопроса.
+ * Этот функционал нужен для корректной обработки того, кто может оценить ответ
+ * @author github.com/SlavikJunior
+ * @version 1.0.0
+ * @since 1.0.0
+ **/
+
 public class MessageStorage {
+
+    /**
+     * Класс, описывающий, какая информация будет храниться под конкретным id сообщения
+     * @author github.com/SlavikJunior
+     * @version 1.0.0
+     * @since 1.0.0
+     **/
 
     public static class QuestionInfo {
         private Long userId;
