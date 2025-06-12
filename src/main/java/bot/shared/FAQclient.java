@@ -12,13 +12,18 @@ import java.net.URL;
 /**
  * Класс, взаимодействующий с FastAPI приложением.
  * Посылает запрос пользователя и получает ответ модели.
- * @author github.com/SlavikJunior
- * @version 1.0.0
+ * @author github.com/tensaid7
+ * @version 1.0.1
  * @since 1.0.0
  **/
 
 public class FAQclient {
 
+//    private static String URL_ADDRESS;
+//
+//    public static void setUpURL(String URL) {
+//        URL_ADDRESS = URL;
+//    }
     private static final String URL_ADDRESS = "http://localhost:8000/ask";
 
     public static String ask(String question) {
@@ -40,6 +45,13 @@ public class FAQclient {
         connection.setRequestProperty("Accept", "application/json");
         connection.setDoOutput(true);
 
+//        try {
+//            if (connection.getResponseCode() != 200) {
+//                throw new IOException("HTTP error: " + connection.getResponseCode());
+//            }
+//        } catch (IOException e) {
+//            System.out.println("Ошибка во время проверки кода соединения!");
+//        }
 
         try(OutputStream os = connection.getOutputStream()) {
             byte[] input = jsonInputString.getBytes("utf-8");
