@@ -18,7 +18,7 @@ import java.util.List;
 
 /**
  * Класс описывает @ITIS_FAQ_BOT.
- * @author github.com/SlavikJunior
+ * @author github.com/SlavikJunior, github.com/tensaid7
  * @version 1.0.0
  * @since 1.0.0
  **/
