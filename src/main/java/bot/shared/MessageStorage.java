@@ -1,5 +1,7 @@
 package bot.shared;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -40,6 +42,7 @@ public class MessageStorage {
 
     private final Map<Integer, QuestionInfo> MAP_OF_MESSAGE_ID_AND_QUESTION_INFO = new ConcurrentHashMap<>();
     private final int MAX_SIZE = 1000;
+
 
     public void put(Integer messageId, QuestionInfo questionInfo) {
         if (MAP_OF_MESSAGE_ID_AND_QUESTION_INFO.size() >= MAX_SIZE)

@@ -34,6 +34,10 @@ public class ITIScallbackHandler {
         long chatId = callbackQuery.getMessage().getChatId();
         int messageId = callbackQuery.getMessage().getMessageId();
 
+        if (callbackQuery.getData().equals("admission_answer") && Secrets.isAdmission(user.getUserName())) {
+
+        }
+
         // если заданный вопрос не принадлежит тому, кто фидбечит, просто игнорим
         if (!MESSAGE_STORAGE.isAsked(user.getId())) {
             return;

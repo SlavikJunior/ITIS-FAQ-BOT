@@ -9,8 +9,13 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,7 +76,7 @@ public class ITISmessageHandler {
         } else {
             // не знание ответа: Тегает сотрудника, + "Вы можете дождаться ответа сотрудника, либо написать сами"
             // + кнопка ответить, которую могут нажать только сотрудники
-            sendMessage(chatId, "🚨 Не могу ответить на вопрос:\n\n❓ Вопрос:\n" + question +
+            sendLowConfidenceAnswer(chatId, "🚨 Не могу ответить на вопрос:\n\n❓ Вопрос:\n" + question +
                     "\n\n\uD83D\uDCACПриемная комиссия: " + String.join(" ", Secrets.getAdmission()));
         }
     }
@@ -122,8 +127,7 @@ public class ITISmessageHandler {
         return InlineKeyboardMarkup.builder().keyboard(rows).build();
     }
 
-    // сделать private потом
-    public void sendMessage(long chatId, String text) {
+    private void sendMessage(long chatId, String text) {
         try {
             CLIENT.execute(SendMessage.builder()
                     .chatId(chatId)
@@ -131,6 +135,28 @@ public class ITISmessageHandler {
                     .build());
         } catch (Exception e) {
             System.out.println("Ошибка отправки сообщения");
+        }
+    }
+
+    private void sendLowConfidenceAnswer(long chatId, String text) {
+        InlineKeyboardButton btn = InlineKeyboardButton.builder()
+                .text("\uD83D\uDD0D Ответить")
+                .callbackData("admission_answer")
+                .build();
+
+        InlineKeyboardRow row = new InlineKeyboardRow(btn);
+
+        SendMessage message = SendMessage
+                .builder()
+                .chatId(chatId)
+                .text(text)
+                .replyMarkup(new InlineKeyboardMarkup(List.of(row)))
+                .build();
+
+        try {
+            CLIENT.execute(message);
+        } catch (TelegramApiException e) {
+            System.out.println("Ошибка отправки неуверенного ответа!");
         }
     }
 }
