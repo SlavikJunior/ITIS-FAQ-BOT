@@ -30,7 +30,7 @@ import java.util.List;
 public class DEVmessageHandler {
     private final TelegramClient CLIENT;
     private final DevLoggerBot LOGGER_BOT;
-    private static final int MAX_INLINE_LOGS = 10;
+    private static final int MAX_INLINE_LOGS = 21;
 
     public DEVmessageHandler(TelegramClient client, DevLoggerBot bot) {
         CLIENT = client;
