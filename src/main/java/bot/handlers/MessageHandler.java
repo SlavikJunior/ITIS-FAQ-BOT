@@ -1,5 +1,6 @@
 package bot.handlers;
 
+import bot.Secrets;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -7,13 +8,15 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
+
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Класс представляет собой функционал ответов @ITIS_FAQ_BOT
+ *
  * @author github.com/SlavikJunior
- * @version 1.0.0
+ * @version 1.0.1
  * @since 1.0.0
  **/
 
@@ -32,6 +35,13 @@ public class MessageHandler {
         try {
             CLIENT.execute(message);
         } catch (TelegramApiException e) {
+            if (e.getMessage().contains("429")) {
+                try {
+                    Thread.sleep(5000L); // Ждем указанное время
+                } catch (InterruptedException ex) {
+                    System.out.println("Ошибка засыпания!");
+                }
+            }
             System.out.println("Ошибка отправки сообщения");
         }
     }
@@ -72,7 +82,6 @@ public class MessageHandler {
         rows.add(row);
         inlineKeyboardMarkup.setKeyboard(rows);
 
-        return  inlineKeyboardMarkup;
+        return inlineKeyboardMarkup;
     }
-
 }

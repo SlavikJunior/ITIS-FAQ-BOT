@@ -25,10 +25,10 @@ public class BotsRunner {
         // Создаем основной бот и передаем ему логгер
         ITISbot itisBot = new ITISbot(loggerBot);
 
-        try (BotSession devSession = APP.registerBot(Secrets.DEV_TOKEN, loggerBot);
-             BotSession itisSession = APP.registerBot(Secrets.TOKEN, itisBot)) {
+        try {
+            APP.registerBot(Secrets.DEV_TOKEN, loggerBot);
+            APP.registerBot(Secrets.TOKEN, itisBot);
             System.out.println("✅ Оба бота запущены!");
-
         } catch (TelegramApiException e) {
             System.err.println("❌ Ошибка запуска ботов: " + e.getMessage());
         }
