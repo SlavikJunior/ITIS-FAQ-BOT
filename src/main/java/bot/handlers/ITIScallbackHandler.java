@@ -100,7 +100,7 @@ public class ITIScallbackHandler {
                     .chatId(message.getChatId())
                     .text("✍ Ответ для @" +
                             MESSAGE_STORAGE.getPendingQuestion(message.getMessageId()).username +
-                            ":\n\uD83D\uDCDDВведите текст)")
+                            ":\n\uD83D\uDCDD(Введите текст)")
                     .build());
 
         } catch (TelegramApiException e) {
