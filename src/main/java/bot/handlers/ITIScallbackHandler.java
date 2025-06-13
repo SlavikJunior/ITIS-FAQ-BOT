@@ -34,8 +34,8 @@ public class ITIScallbackHandler {
         long chatId = callbackQuery.getMessage().getChatId();
         int messageId = callbackQuery.getMessage().getMessageId();
 
+        // если заданный вопрос не принадлежит тому, кто фидбечит, просто игнорим
         if (!MESSAGE_STORAGE.isAsked(user.getId())) {
-            new ITISmessageHandler(CLIENT, LOGGER_BOT, MESSAGE_STORAGE).sendMessage(chatId, "\uD83D\uDEA8 А-ТА-ТА-ТА! Нажимай на свои кнопочки, а чужие не трогай)");
             return;
         }
 
