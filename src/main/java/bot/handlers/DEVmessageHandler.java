@@ -22,7 +22,7 @@ import java.util.List;
 
 /**
  * Класс представляет собой интерфейс текстового взаимодействия @DEV_ITIS_FAQ_BOT
- * @author github.com/SlavikJunior
+ * @author github.com/SlavikJunior, github.com/tensaid7
  * @version 1.0.1
  * @since 1.0.1
  **/
@@ -42,7 +42,11 @@ public class DEVmessageHandler {
         long chatId = message.getChatId();
 
         if (!AuthUtils.isDeveloper(user.getId())) {
-            sendAccessDenied(chatId);
+            try {
+                sendMessage(chatId, "🚫 Доступ только для разработчиков!");
+            } catch (TelegramApiException e) {
+                System.out.println("Ошибка отправки сообщения о запрете доступа!");
+            }
             return;
         }
 
@@ -64,10 +68,10 @@ public class DEVmessageHandler {
             } else if (message.getReplyToMessage() != null) {
                 handleReplyToMessage(message);
             } else {
-                sendUnknownCommand(chatId);
+                sendMessage(chatId, "Неопознанная команда! ⚠");
             }
         } catch (TelegramApiException e) {
-            handleMessageError(chatId, e);
+            System.out.println("Ошибка обработки текстовой команды!");
         }
     }
 
@@ -93,7 +97,7 @@ public class DEVmessageHandler {
                 .text("🛠️ Панель управления")
                 .replyMarkup(createAdminKeyboard())
                 .build();
-        executeM(message);
+        execute(message);
     }
 
     private void handleAllLogsCommand(long chatId) throws TelegramApiException {
@@ -196,7 +200,7 @@ public class DEVmessageHandler {
                 throw new IOException("Файл логов пуст");
             }
 
-            executeM(SendDocument.builder()
+            sendDocument(SendDocument.builder()
                     .chatId(chatId)
                     .document(new InputFile(file, fileName))
                     .build());
@@ -249,23 +253,8 @@ public class DEVmessageHandler {
                 .build();
     }
 
-    private void sendAccessDenied(long chatId) {
-        try {
-            executeM(SendMessage.builder()
-                    .chatId(chatId)
-                    .text("🚫 Доступ только для разработчиков!")
-                    .build());
-        } catch (TelegramApiException e) {
-            System.err.println("Ошибка отправки сообщения об отказе: " + e.getMessage());
-        }
-    }
-
-    private void sendUnknownCommand(long chatId) throws TelegramApiException {
-        sendMessage(chatId, "Неопознанная команда! ⚠");
-    }
-
     private void sendMarkdownMessage(long chatId, String text) throws TelegramApiException {
-        executeM(SendMessage.builder()
+        execute(SendMessage.builder()
                 .chatId(chatId)
                 .text(text)
                 .parseMode("Markdown")
@@ -273,26 +262,13 @@ public class DEVmessageHandler {
     }
 
     private void sendMessage(long chatId, String text) throws TelegramApiException {
-        executeM(SendMessage.builder()
+        execute(SendMessage.builder()
                 .chatId(chatId)
                 .text(text)
                 .build());
     }
 
-    private void handleMessageError(long chatId, TelegramApiException e) {
-        try {
-            sendMessage(chatId, "⚠ Ошибка обработки команды. Попробуйте позже");
-            System.err.println("Message error: " + e.getMessage());
-        } catch (Exception ex) {
-            System.err.println("Double error: " + ex.getMessage());
-        }
-    }
-
-    private void executeM(SendMessage message) throws TelegramApiException {
-        CLIENT.execute(message);
-    }
-
-    private void executeM(SendDocument document) throws TelegramApiException {
+    private void sendDocument(SendDocument document) throws TelegramApiException {
         CLIENT.execute(document);
     }
 
@@ -303,7 +279,8 @@ public class DEVmessageHandler {
                 .build());
     }
 
-    private void execute(BotApiMethod<?> m) throws TelegramApiException{
-        CLIENT.execute(m);
+    // экзекьютор для общих методов
+    private void execute(BotApiMethod<?> method) throws TelegramApiException{
+        CLIENT.execute(method);
     }
 }

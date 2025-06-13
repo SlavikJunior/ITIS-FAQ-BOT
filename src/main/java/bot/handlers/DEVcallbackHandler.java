@@ -1,7 +1,7 @@
 package bot.handlers;
 
-import bot.DevLoggerBot;
 import bot.Secrets;
+import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
@@ -16,18 +16,16 @@ import java.util.Set;
 /**
  * Класс представляет собой интерфейс callback взаимодействия @DEV_ITIS_FAQ_BOT
  *
- * @author github.com/SlavikJunior
+ * @author github.com/SlavikJunior, github.com/tensaid7
  * @version 1.0.1
  * @since 1.0.1
  **/
 
 public class DEVcallbackHandler {
-    private final TelegramClient client;
-    private final DevLoggerBot bot;
+    private final TelegramClient CLIENT;
 
-    public DEVcallbackHandler(TelegramClient client, DevLoggerBot bot) {
-        this.client = client;
-        this.bot = bot;
+    public DEVcallbackHandler(TelegramClient client) {
+        CLIENT = client;
     }
 
     public void handle(CallbackQuery callbackQuery) {
@@ -165,15 +163,8 @@ public class DEVcallbackHandler {
         }
     }
 
-    private void execute(SendMessage message) throws TelegramApiException {
-        client.execute(message);
-    }
-
-    private void execute(EditMessageReplyMarkup editMarkup) throws TelegramApiException {
-        client.execute(editMarkup);
-    }
-
-    private void execute(DeleteMessage deleteMessage) throws TelegramApiException {
-        client.execute(deleteMessage);
+    // экзекьютор для общих методов
+    private void execute(BotApiMethod<?> method) throws TelegramApiException {
+        CLIENT.execute(method);
     }
 }

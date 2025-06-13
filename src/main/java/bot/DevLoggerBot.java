@@ -26,7 +26,7 @@ public class DevLoggerBot implements LongPollingUpdateConsumer {
     public DevLoggerBot() {
         CLIENT = new OkHttpTelegramClient(Secrets.DEV_TOKEN);
         MESSAGE_HANDLER = new DEVmessageHandler(CLIENT, this);
-        CALLBACK_HANDLER = new DEVcallbackHandler(CLIENT, this);
+        CALLBACK_HANDLER = new DEVcallbackHandler(CLIENT);
     }
 
     @Override
