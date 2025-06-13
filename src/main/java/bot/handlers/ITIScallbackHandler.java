@@ -22,11 +22,13 @@ public class ITIScallbackHandler {
     private final TelegramClient CLIENT;
     private final DevLoggerBot LOGGER_BOT;
     private final MessageStorage MESSAGE_STORAGE;
+    private final ITISmessageHandler ITIS_MESSAGE_HANDLER;
 
-    public ITIScallbackHandler(TelegramClient client, DevLoggerBot loggerBot, MessageStorage messageStorage) {
+    public ITIScallbackHandler(TelegramClient client, DevLoggerBot loggerBot, MessageStorage messageStorage, ITISmessageHandler itiSmessageHandler) {
         CLIENT = client;
         LOGGER_BOT = loggerBot;
         MESSAGE_STORAGE = messageStorage;
+        ITIS_MESSAGE_HANDLER = itiSmessageHandler;
     }
 
     public void handle(CallbackQuery callbackQuery) {
@@ -69,6 +71,7 @@ public class ITIScallbackHandler {
                 userId, chatId, question, answer, 0.0,
                 "Пользователь отметил ответ как неполезный", "BAD_FEEDBACK"
         ));
+        ITIS_MESSAGE_HANDLER.sendAdminResponseRequest(chatId, question, answer, user);
     }
 
     private void removeFeedbackButtons(long chatId, int messageId) {

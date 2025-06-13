@@ -17,16 +17,16 @@ import java.util.List;
  **/
 
 public class ITISbot implements LongPollingUpdateConsumer {
-    private final TelegramClient client;
+    private final TelegramClient CLIENT;
     private final ITISmessageHandler ITIS_MESSAGE_HANDLER;
     private final ITIScallbackHandler ITIS_CALLBACK_HANDLER;
     private final MessageStorage MESSAGE_STORAGE;
 
     public ITISbot(DevLoggerBot loggerBot) {
-        this.client = new OkHttpTelegramClient(Secrets.TOKEN);
+        CLIENT = new OkHttpTelegramClient(Secrets.TOKEN);
         MESSAGE_STORAGE = new MessageStorage();
-        this.ITIS_MESSAGE_HANDLER = new ITISmessageHandler(client, loggerBot, MESSAGE_STORAGE);
-        this.ITIS_CALLBACK_HANDLER = new ITIScallbackHandler(client, loggerBot, MESSAGE_STORAGE);
+        ITIS_MESSAGE_HANDLER = new ITISmessageHandler(CLIENT, loggerBot, MESSAGE_STORAGE);
+        ITIS_CALLBACK_HANDLER = new ITIScallbackHandler(CLIENT, loggerBot, MESSAGE_STORAGE, ITIS_MESSAGE_HANDLER);
     }
 
     @Override
