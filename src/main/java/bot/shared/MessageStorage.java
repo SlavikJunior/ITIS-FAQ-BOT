@@ -1,13 +1,12 @@
 package bot.shared;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Класс отвечает за хранение привязки вопроса к отправителю и текста вопроса.
  * Этот функционал нужен для корректной обработки того, кто может оценить ответ
+ *
  * @author github.com/SlavikJunior
  * @version 1.0.0
  * @since 1.0.0
@@ -17,8 +16,27 @@ public class MessageStorage {
 
     /**
      * Класс, описывающий, какая информация будет храниться под конкретным id сообщения
+     *
+     * @author github.com/tensaid7
+     * @version 1.0.1
+     * @since 1.0.0
+     **/
+
+    public static class PendingQuestion {
+        public long userId;
+        public String username;
+        public long chatId;
+    }
+
+    private final Map<Integer, PendingQuestion> pendingQuestions = new ConcurrentHashMap<>();
+    private final Map<Long, Integer> adminToMessageMap = new ConcurrentHashMap<>();
+    private final Set<Integer> answeredMessages = new HashSet<>();
+
+    /**
+     * Класс, описывающий, какая информация будет храниться под конкретным id сообщения
+     *
      * @author github.com/SlavikJunior
-     * @version 1.0.0
+     * @version 1.0.1
      * @since 1.0.0
      **/
 
@@ -66,5 +84,44 @@ public class MessageStorage {
                 return true;
         }
         return false;
+    }
+
+    // новый функционал
+
+    public void addPendingQuestion(int messageId, long userId, String username, long chatId) {
+        PendingQuestion question = new PendingQuestion();
+        question.userId = userId;
+        question.username = username;
+        question.chatId = chatId;
+        pendingQuestions.put(messageId, question);
+    }
+
+    public void setAdminResponse(long adminId, Integer messageId) {
+        if (messageId == null)
+            adminToMessageMap.remove(adminId);
+        else
+            adminToMessageMap.put(adminId, messageId);
+    }
+
+    public PendingQuestion getPendingQuestion(int messageId) {
+        return pendingQuestions.get(messageId);
+    }
+
+    public PendingQuestion getQuestionByAdmin(long adminId) {
+        Integer messageId = adminToMessageMap.get(adminId);
+        return messageId != null ? pendingQuestions.get(messageId) : null;
+    }
+
+    public void clearAdminState(long adminId) {
+        adminToMessageMap.remove(adminId);
+    }
+
+    public void removePendingQuestion(int messageId) {
+        pendingQuestions.remove(messageId);
+        answeredMessages.add(messageId);
+    }
+
+    public boolean isAdminResponding(long adminId) {
+        return adminToMessageMap.containsKey(adminId);
     }
 }

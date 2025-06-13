@@ -1,7 +1,6 @@
 package bot.shared;
 
 import bot.Secrets;
-
 import java.util.Set;
 
 /**

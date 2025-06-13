@@ -9,12 +9,8 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 import java.util.ArrayList;
@@ -22,6 +18,7 @@ import java.util.List;
 
 /**
  * Класс представляет собой интерфейс текстового взаимодействия @ITIS_FAQ_BOT
+ *
  * @author github.com/SlavikJunior
  * @version 1.0.1
  * @since 1.0.1
@@ -42,10 +39,18 @@ public class ITISmessageHandler {
         if (!message.hasText()) return;
 
         User user = message.getFrom();
+        String userName = "@" + user.getUserName();
         String text = message.getText();
         long userId = user.getId();
         long chatId = message.getChatId();
 
+        // обрабатываем действия администрации
+        if (Secrets.isAdmission(userName) && MESSAGE_STORAGE.isAdminResponding(user.getId())) {
+            handleAdminResponse(message);
+            return;
+        }
+
+        // обрабатываем действия особых пользователей
         if (Secrets.isAlarmUser(String.valueOf(userId))) {
             sendMessage(chatId, Secrets.getAnswerForAlarmUser(String.valueOf(userId)));
             return;
@@ -73,12 +78,9 @@ public class ITISmessageHandler {
         if (!answer.isEmpty()) {
             Message answerMessage = sendAnswer(chatId, answer);
             MESSAGE_STORAGE.put(answerMessage.getMessageId(), new MessageStorage.QuestionInfo(userId, question));
-        } else {
-            // не знание ответа: Тегает сотрудника, + "Вы можете дождаться ответа сотрудника, либо написать сами"
-            // + кнопка ответить, которую могут нажать только сотрудники
-            sendLowConfidenceAnswer(chatId, "🚨 Не могу ответить на вопрос:\n\n❓ Вопрос:\n" + question +
-                    "\n\n\uD83D\uDCACПриемная комиссия: " + String.join(" ", Secrets.getAdmission()));
-        }
+        } else
+            // если модель не смогла ответить, сразу уведомляем администратора
+            sendAdminResponseRequest(chatId, question, "", message.getFrom());
     }
 
     private String processAnswer(String answer, long userId, long chatId, String question) {
@@ -127,7 +129,7 @@ public class ITISmessageHandler {
         return InlineKeyboardMarkup.builder().keyboard(rows).build();
     }
 
-    private void sendMessage(long chatId, String text) {
+    void sendMessage(long chatId, String text) {
         try {
             CLIENT.execute(SendMessage.builder()
                     .chatId(chatId)
@@ -138,25 +140,76 @@ public class ITISmessageHandler {
         }
     }
 
-    private void sendLowConfidenceAnswer(long chatId, String text) {
-        InlineKeyboardButton btn = InlineKeyboardButton.builder()
-                .text("\uD83D\uDD0D Ответить")
-                .callbackData("admission_answer")
-                .build();
-
-        InlineKeyboardRow row = new InlineKeyboardRow(btn);
-
-        SendMessage message = SendMessage
-                .builder()
-                .chatId(chatId)
-                .text(text)
-                .replyMarkup(new InlineKeyboardMarkup(List.of(row)))
-                .build();
+    void sendAdminResponseRequest(long chatId, String question, String badAnswer, User user) {
+        String messageText = buildAdminRequestText(question, badAnswer, user.getUserName());
+        InlineKeyboardMarkup markup = createResponseButton();
 
         try {
-            CLIENT.execute(message);
+            Message sentMessage = CLIENT.execute(SendMessage.builder()
+                    .chatId(chatId)
+                    .text(messageText)
+                    .replyMarkup(markup)
+                    .build());
+
+            MESSAGE_STORAGE.addPendingQuestion(
+                    sentMessage.getMessageId(),
+                    user.getId(),
+                    user.getUserName(),
+                    chatId
+            );
         } catch (TelegramApiException e) {
-            System.out.println("Ошибка отправки неуверенного ответа!");
+            System.out.println("Ошибка отправки запроса администратору");
+        }
+    }
+
+    private String buildAdminRequestText(String question, String badAnswer, String username) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("🚨 Требуется ответ для @").append(username).append(":\n\n");
+        sb.append("❓ Вопрос: ").append(question).append("\n\n");
+
+        if (!badAnswer.isEmpty()) {
+            sb.append("💬 Проблемный ответ: ").append(badAnswer).append("\n\n");
+        }
+
+        sb.append("👥 Ответственные: ").append(String.join(" ", Secrets.getAdmission()));
+        return sb.toString();
+    }
+
+    private InlineKeyboardMarkup createResponseButton() {
+        return InlineKeyboardMarkup.builder()
+                .keyboardRow(new InlineKeyboardRow(
+                        InlineKeyboardButton.builder()
+                                .text("\uD83D\uDD0D Ответить")
+                                .callbackData("admin_response")
+                                .build()
+                ))
+                .build();
+    }
+
+    private void handleAdminResponse(Message message) {
+        MessageStorage.PendingQuestion question = MESSAGE_STORAGE.getQuestionByAdmin(message.getFrom().getId());
+        if (question == null) return;
+
+        try {
+            // Отправляем ответ
+            String response = "✉ @" + question.username + ", ответ от приёмной комиссии:\n" + message.getText();
+            CLIENT.execute(SendMessage.builder()
+                    .chatId(question.chatId)
+                    .text(response)
+                    .build());
+
+            // Уведомление админу
+            CLIENT.execute(SendMessage.builder()
+                    .chatId(message.getChatId())
+                    .text("✅ Ответ отправлен @" + question.username)
+                    .build());
+
+            // Полная очистка состояния
+            MESSAGE_STORAGE.clearAdminState(message.getFrom().getId());
+            MESSAGE_STORAGE.removePendingQuestion(message.getMessageId());
+
+        } catch (TelegramApiException e) {
+            System.out.println("Ошибка обработки ответа");
         }
     }
 }
