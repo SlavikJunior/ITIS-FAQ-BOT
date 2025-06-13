@@ -61,5 +61,3 @@ target/
 *~.nib
 
 src/main/java/bot/Secrets.java
-
-src/main/resources/*

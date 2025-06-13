@@ -18,7 +18,7 @@ import java.net.URL;
  **/
 
 public class FAQclient {
-
+//         задел на будующее
 //    private static String URL_ADDRESS;
 //
 //    public static void setUpURL(String URL) {

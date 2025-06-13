@@ -62,7 +62,6 @@ public class ITIScallbackHandler {
         }
 
         removeFeedbackButtons(chatId, messageId);
-//        sendFeedbackConfirmation(chatId, feedbackType);
         MESSAGE_STORAGE.remove(messageId);
     }
 
@@ -88,14 +87,13 @@ public class ITIScallbackHandler {
 
     private void handleAdminResponseRequest(User admin, Message message) {
         try {
-            // Удаляем кнопку
             CLIENT.execute(EditMessageReplyMarkup.builder()
                     .chatId(message.getChatId())
                     .messageId(message.getMessageId())
                     .replyMarkup(null)
                     .build());
 
-            // Устанавливаем состояние админа
+            // коннект между админом и ответом
             MESSAGE_STORAGE.setAdminResponse(admin.getId(), message.getMessageId());
 
             // Запрашиваем ответ

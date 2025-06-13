@@ -15,7 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MessageStorage {
 
     /**
-     * Класс, описывающий, какая информация будет храниться под конкретным id сообщения
+     * Класс, описывающий, контекст вопросов во время,
+     * когда модель не дала ответ
      *
      * @author github.com/tensaid7
      * @version 1.0.1
@@ -23,9 +24,9 @@ public class MessageStorage {
      **/
 
     public static class PendingQuestion {
-        public long userId;
-        public String username;
-        public long chatId;
+        public long userId; // id спрашивающего
+        public String username; // его username для упоминания
+        public long chatId; // чат, куда отправим ответ
     }
 
     private final Map<Integer, PendingQuestion> pendingQuestions = new ConcurrentHashMap<>();
@@ -61,7 +62,6 @@ public class MessageStorage {
     private final Map<Integer, QuestionInfo> MAP_OF_MESSAGE_ID_AND_QUESTION_INFO = new ConcurrentHashMap<>();
     private final int MAX_SIZE = 1000;
 
-
     public void put(Integer messageId, QuestionInfo questionInfo) {
         if (MAP_OF_MESSAGE_ID_AND_QUESTION_INFO.size() >= MAX_SIZE)
             MAP_OF_MESSAGE_ID_AND_QUESTION_INFO.clear();
@@ -86,9 +86,10 @@ public class MessageStorage {
         return false;
     }
 
-    // новый функционал
-
     public void addPendingQuestion(int messageId, long userId, String username, long chatId) {
+        if (pendingQuestions.size() >= MAX_SIZE)
+            pendingQuestions.clear();
+
         PendingQuestion question = new PendingQuestion();
         question.userId = userId;
         question.username = username;
@@ -107,21 +108,22 @@ public class MessageStorage {
         return pendingQuestions.get(messageId);
     }
 
-    public PendingQuestion getQuestionByAdmin(long adminId) {
-        Integer messageId = adminToMessageMap.get(adminId);
-        return messageId != null ? pendingQuestions.get(messageId) : null;
-    }
-
     public void clearAdminState(long adminId) {
         adminToMessageMap.remove(adminId);
     }
 
     public void removePendingQuestion(int messageId) {
         pendingQuestions.remove(messageId);
+        if (answeredMessages.size() >= MAX_SIZE)
+            answeredMessages.clear();
         answeredMessages.add(messageId);
     }
 
     public boolean isAdminResponding(long adminId) {
         return adminToMessageMap.containsKey(adminId);
+    }
+
+    public Integer getAdminMessageId(long adminId) {
+        return adminToMessageMap.get(adminId);
     }
 }
