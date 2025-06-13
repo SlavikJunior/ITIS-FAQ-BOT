@@ -171,7 +171,6 @@ public class ITISmessageHandler {
             sb.append("💬 Проблемный ответ: ").append(badAnswer).append("\n\n");
         }
 
-        sb.append("👥 Ответственные: ").append(String.join(" ", Secrets.getAdmission()));
         return sb.toString();
     }
 
@@ -187,7 +186,10 @@ public class ITISmessageHandler {
     }
 
     private void handleAdminResponse(Message message) {
-        MessageStorage.PendingQuestion question = MESSAGE_STORAGE.getQuestionByAdmin(message.getFrom().getId());
+        Integer questionMessageId = MESSAGE_STORAGE.getAdminMessageId(message.getFrom().getId());
+        if (questionMessageId == null) return;
+
+        MessageStorage.PendingQuestion question = MESSAGE_STORAGE.getPendingQuestion(questionMessageId);
         if (question == null) return;
 
         try {
@@ -198,15 +200,9 @@ public class ITISmessageHandler {
                     .text(response)
                     .build());
 
-            // Уведомление админу
-            CLIENT.execute(SendMessage.builder()
-                    .chatId(message.getChatId())
-                    .text("✅ Ответ отправлен @" + question.username)
-                    .build());
-
             // Полная очистка состояния
+            MESSAGE_STORAGE.removePendingQuestion(questionMessageId);
             MESSAGE_STORAGE.clearAdminState(message.getFrom().getId());
-            MESSAGE_STORAGE.removePendingQuestion(message.getMessageId());
 
         } catch (TelegramApiException e) {
             System.out.println("Ошибка обработки ответа");
