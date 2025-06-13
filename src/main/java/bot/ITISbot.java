@@ -76,7 +76,10 @@ public class ITISbot implements LongPollingUpdateConsumer {
                         Message answerMessage = MESSAGE_HANDLER.sendAnswer(chatId, answer);
                         MESSAGE_STORAGE.put(answerMessage.getMessageId(), new MessageStorage.QuestionInfo(userId, question));
                     } else {
-                        sendLowConfidenceAlert(chatId, question);
+//                        sendLowConfidenceAlert(chatId, question);
+                        MESSAGE_HANDLER.sendMessage(chatId, "🚨 Не могу ответить на вопрос:\n\n" +
+                                "❓ Вопрос:\n" + question + "\n\n" +
+                                "\uD83D\uDCACПриемная комиссия: " + String.join(" ", Secrets.getAdmission()));
                     }
                 }
             } else if (update.hasCallbackQuery()) {
