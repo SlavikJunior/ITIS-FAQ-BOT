@@ -1,77 +1,47 @@
 package bot.shared;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.ProtocolException;
 import java.net.URL;
+import java.util.stream.Collectors;
 
 /**
- * Класс, взаимодействующий с FastAPI приложением.
+ * Класс, взаимодействующий с FastAPI веб-сервером.
  * Посылает запрос пользователя и получает ответ модели.
  * @author github.com/tensaid7
- * @version 1.0.1
+ * @version 1.0.2
  * @since 1.0.0
  **/
 
 public class FAQclient {
-//         задел на будующее
-//    private static String URL_ADDRESS;
-//
-//    public static void setUpURL(String URL) {
-//        URL_ADDRESS = URL;
-//    }
-    private static final String URL_ADDRESS = "http://localhost:8000/ask";
+
+    private static final String URL_ADDRESS =
+            System.getenv().getOrDefault("PYTHON_API_URL", "http://localhost:8000") + "/ask";
 
     public static String ask(String question) {
         String jsonInputString = "{\"question\": \"" + question + "\"}";
-        HttpURLConnection connection = null;
+
         try {
-            connection = (HttpURLConnection) new URL(URL_ADDRESS).openConnection();
-        } catch (MalformedURLException e) {
-            System.out.println("Ошибка конекшена!");
-        } catch (IOException e) {
-            System.out.println("Ошибка ввода-вывода!");
-        }
-        try {
+            HttpURLConnection connection = (HttpURLConnection) new URL(URL_ADDRESS).openConnection();
             connection.setRequestMethod("POST");
-        } catch (ProtocolException e) {
-            System.out.println("Ошибка протокола!");
-        }
-        connection.setRequestProperty("Content-Type", "application/json");
-        connection.setRequestProperty("Accept", "application/json");
-        connection.setDoOutput(true);
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setDoOutput(true);
 
-//        try {
-//            if (connection.getResponseCode() != 200) {
-//                throw new IOException("HTTP error: " + connection.getResponseCode());
-//            }
-//        } catch (IOException e) {
-//            System.out.println("Ошибка во время проверки кода соединения!");
-//        }
-
-        try(OutputStream os = connection.getOutputStream()) {
-            byte[] input = jsonInputString.getBytes("utf-8");
-            os.write(input, 0, input.length);
-        } catch (IOException e) {
-            System.out.println("Ошибка ввода-вывода!");
-        }
-
-        StringBuilder response = new StringBuilder();
-        try(BufferedReader br = new BufferedReader(
-                new InputStreamReader(connection.getInputStream(), "utf-8"))) {
-            String responseLine;
-            while ((responseLine = br.readLine()) != null) {
-                response.append(responseLine.trim());
+            try (OutputStream os = connection.getOutputStream()) {
+                os.write(jsonInputString.getBytes("utf-8"));
             }
-        } catch (IOException e) {
-            System.out.println("Ошибка ввода-вывода!");
-        }
 
-        return handleResponse(response.toString());
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(connection.getInputStream(), "utf-8"))) {
+                return handleResponse(br.lines().collect(Collectors.joining()));
+            }
+        } catch (Exception e) {
+            System.err.println("Ошибка при запросе к FastAPI: " + e.getMessage());
+            return "ERROR";
+        }
     }
 
     private static String handleResponse(String response) {

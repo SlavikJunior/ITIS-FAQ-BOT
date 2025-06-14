@@ -29,6 +29,12 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter'
 }
 
+jar {
+    manifest {
+        attributes 'Main-Class': 'bot.BotsRunner'  // Укажите ваш главный класс
+    }
+}
+
 test {
     useJUnitPlatform()
 }
