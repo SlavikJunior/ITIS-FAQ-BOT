@@ -1,0 +1,32 @@
+services:
+  python-api:
+    build: ./python
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./python:/app
+    environment:
+      - PYTHON_ENV=production
+    restart: unless-stopped
+    networks:
+      - faqbot-network
+
+  java-bot:
+    build: .
+    depends_on:
+      - python-api
+    environment:
+      - PYTHON_API_URL=http://python-api:8000
+      - JAVA_TOOL_OPTIONS=-Xmx512m
+    restart: unless-stopped
+    networks:
+      - faqbot-network
+    volumes:
+      - ./src:/app/src
+
+networks:
+  faqbot-network:
+    driver: bridge
+
+volumes:
+  gradle-cache:

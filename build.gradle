@@ -31,7 +31,7 @@ dependencies {
 
 jar {
     manifest {
-        attributes 'Main-Class': 'bot.BotsRunner'  // Укажите ваш главный класс
+        attributes 'Main-Class': 'bot.BotsRunner'
     }
 }
 
